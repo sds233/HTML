@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Local Dream 模型获取</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f5f5; color: #2c2c2c;
+  min-height: 100vh; overflow-x: hidden; font-size: 15px;
+  zoom: 0.75; /* 整体缩小界面（等效降低 DPI），可在右上角菜单调整 */
+}
+.container { max-width: 1400px; margin: 0 auto; padding: 16px; }
+h1 { text-align: center; margin-bottom: 12px; color: #1a1a1a; font-size: clamp(1.3rem,4vw,2rem); font-weight: 600; letter-spacing: 0.5px; }
+.author-info { text-align: center; margin-bottom: 18px; color: #888; font-size: 15px; }
+
+/* 搜索区域 */
+.search-section {
+  background: #ffffff; border-radius: 12px; padding: 18px; margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid #e8e8e8;
+}
+.input-group { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.input-group input {
+  flex: 1; min-width: 200px; padding: 13px 16px; border: 1.5px solid #d5d5d5; border-radius: 8px;
+  background: #fafafa; color: #333; font-size: 16px; transition: all 0.2s;
+}
+.input-group input:focus { outline: none; border-color: #1976d2; background: #fff; box-shadow: 0 0 0 3px rgba(25,118,210,0.12); }
+.input-group input::placeholder { color: #999; font-size: 15px; }
+
+/* ===== 数据状态卡片：明确告知数据是否为最新 ===== */
+.data-status-card {
+  background: #f8f9fa; border: 1px solid #e3e5e8; border-radius: 10px;
+  padding: 8px 12px; margin-bottom: 10px;
+}
+.status-line { display: flex; align-items: center; gap: 8px; }
+.status-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  background: #9e9e9e; transition: background 0.3s;
+}
+.dot-fetching { background: #ffa000; animation: pulse 1.2s ease-in-out infinite; }
+.dot-fresh   { background: #43a047; }
+.dot-stale   { background: #fb8c00; }
+.dot-error   { background: #e53935; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.status-text {
+  flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: #333;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.refresh-btn {
+  padding: 4px 12px; background: #1976d2; color: #fff; border: none; border-radius: 6px;
+  font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 12px; flex-shrink: 0;
+}
+.refresh-btn:hover { background: #1565c0; }
+.refresh-btn:disabled { background: #90a4ae; cursor: not-allowed; }
+.progress-wrap { margin-top: 8px; }
+.progress-bar { width: 100%; height: 12px; background: #e8eaed; border-radius: 6px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #1976d2, #42a5f5); transition: width 0.3s; border-radius: 6px; }
+.progress-label { font-size: 12px; color: #666; margin-top: 4px; font-weight: 500; }
+.result-line { margin-top: 6px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.badge { padding: 3px 10px; border-radius: 14px; font-size: 12px; background: #eceff1; color: #455a64; font-weight: 500; }
+
+.sort-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.sort-label { font-size: 13px; color: #555; font-weight: 600; }
+.sort-btn {
+  padding: 5px 12px; background: #f5f5f5; color: #444; border: 1px solid #d8d8d8;
+  border-radius: 20px; cursor: pointer; transition: all 0.2s; font-size: 12px; font-weight: 500;
+}
+.sort-btn:hover, .sort-btn.active { background: #333; color: #fff; border-color: #333; }
+
+.filter-section { margin-bottom: 8px; }
+.filter-title { font-size: 13px; color: #555; margin-bottom: 5px; font-weight: 600; }
+.filter-row { display: flex; gap: 6px; flex-wrap: nowrap; margin-bottom: 6px; }
+.filter-btn {
+  padding: 5px 10px; background: #fafafa; color: #444; border: 1px solid #dcdcdc;
+  border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 12px; font-weight: 500;
+  white-space: nowrap; flex-shrink: 0;
+}
+.filter-btn:hover { background: #efefef; }
+
+/* 筛选描述（点击展开，向下滑动） */
+.filter-desc {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease;
+  background: #f8f9fa; border-radius: 8px; margin-top: 0; padding: 0 12px;
+  font-size: 13px; color: #555; line-height: 1.7;
+}
+.filter-desc.open { max-height: 100px; padding: 10px 12px; margin-top: 6px; }
+
+/* 作者筛选按钮颜色 */
+.filter-btn[data-author="xororz"]     { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+.filter-btn[data-author="YuuiKurata"] { background: #d1ecf1; border-color: #0c879c; color: #0c5460; }
+.filter-btn[data-author="Mr-J-369"]   { background: #e8d5f5; border-color: #9c27b0; color: #4a148c; }
+.filter-btn[data-author="Mykee"]      { background: #d4edda; border-color: #28a745; color: #155724; }
+.filter-btn[data-author="Nez-Norlag"] { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+.filter-btn[data-author="all"].active  { background: #333; border-color: #333; color: #fff; }
+.filter-btn[data-base="all"].active  { background: #333; border-color: #333; color: #fff; }
+.filter-btn[data-effect="all"].active  { background: #333; border-color: #333; color: #fff; }
+.filter-btn[data-author="xororz"].active,
+.filter-btn[data-author="YuuiKurata"].active,
+.filter-btn[data-author="Mr-J-369"].active,
+.filter-btn[data-author="Mykee"].active,
+.filter-btn[data-author="Nez-Norlag"].active { color: #fff; border-color: #333; }
+.filter-btn[data-author="xororz"].active     { background: #ff9800; }
+.filter-btn[data-author="YuuiKurata"].active { background: #0c879c; }
+.filter-btn[data-author="Mr-J-369"].active   { background: #9c27b0; }
+.filter-btn[data-author="Mykee"].active      { background: #28a745; }
+.filter-btn[data-author="Nez-Norlag"].active { background: #dc3545; }
+
+/* 基模筛选按钮颜色 */
+.filter-btn[data-base="sd15"] { background: #fce4ec; border-color: #c2185b; color: #880e4f; }
+.filter-btn[data-base="sdxl"] { background: #d1ecf1; border-color: #0c879c; color: #0c5460; }
+.filter-btn[data-base="dmd2"] { background: #ede7f6; border-color: #6a1b9a; color: #4a148c; }
+.filter-btn[data-base="anime"]{ background: #e0f7fa; border-color: #00695c; color: #004d40; }
+.filter-btn[data-base="ups"]  { background: #d4edda; border-color: #28a745; color: #155724; }
+.filter-btn[data-base="sd15"].active { background: #c2185b; color: #fff; border-color: #333; }
+.filter-btn[data-base="sdxl"].active { background: #0c879c; color: #fff; border-color: #333; }
+.filter-btn[data-base="dmd2"].active { background: #6a1b9a; color: #fff; border-color: #333; }
+.filter-btn[data-base="anime"].active { background: #00695c; color: #fff; border-color: #333; }
+.filter-btn[data-base="ups"].active { background: #28a745; color: #fff; border-color: #333; }
+
+/* 效果筛选按钮颜色 */
+.filter-btn[data-effect="real"] { background: #cce5ff; border-color: #007bff; color: #004085; }
+.filter-btn[data-effect="anime"]{ background: #e8d5f5; border-color: #9c27b0; color: #4a148c; }
+.filter-btn[data-effect="illus"]{ background: #f8d7da; border-color: #dc3545; color: #721c24; }
+.filter-btn[data-effect="pony"] { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+.filter-btn[data-effect="real"].active { background: #007bff; color: #fff; border-color: #333; }
+.filter-btn[data-effect="anime"].active { background: #9c27b0; color: #fff; border-color: #333; }
+.filter-btn[data-effect="illus"].active { background: #dc3545; color: #fff; border-color: #333; }
+.filter-btn[data-effect="pony"].active { background: #ff9800; color: #fff; border-color: #333; }
+
+/* 基模标签 */
+.tag-base { font-size: 12px; padding: 3px 8px; border-radius: 4px; margin-left: 4px; font-weight: 500; }
+.tag-sd15  { background: #fce4ec; color: #c2185b; }
+.tag-sdxl  { background: #d1ecf1; color: #0c879c; }
+.tag-dmd2  { background: #ede7f6; color: #6a1b9a; }
+.tag-anime { background: #e0f7fa; color: #00695c; }
+.tag-ups   { background: #d4edda; color: #28a745; }
+
+/* 效果标签 */
+.tag-efx { font-size: 12px; padding: 3px 8px; border-radius: 4px; margin-left: 4px; font-weight: 500; }
+.tag-real  { background: #cce5ff; color: #007bff; }
+.tag-anime2{ background: #e8d5f5; color: #9c27b0; }
+.tag-illus { background: #f8d7da; color: #dc3545; }
+.tag-pony  { background: #fff3e0; color: #ff9800; }
+
+.files-grid { display: grid; gap: 10px; }
+.file-card {
+  background: #ffffff; border-radius: 10px; padding: 16px; cursor: pointer;
+  transition: all 0.2s; border: 1px solid #e8e8e8;
+}
+.file-card:hover { transform: translateY(-2px); border-color: #bbb; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.file-name { font-size: 16px; font-weight: 600; color: #222; margin-bottom: 9px; word-break: break-all; line-height: 1.5; }
+.file-meta { display: flex; gap: 14px; font-size: 14px; color: #777; align-items: center; flex-wrap: wrap; }
+.meta-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.model-source { font-size: 13px; color: #666; margin-right: 4px; white-space: nowrap; }
+
+.file-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; align-items: center; }
+.author-tag { font-size: 12px; padding: 4px 10px; border-radius: 5px; font-weight: 500; }
+.author-xororz     { background: #fff3e0; color: #e65100; }
+.author-YuuiKurata { background: #d1ecf1; color: #0c5460; }
+.author-MrJ369     { background: #e8d5f5; color: #4a148c; }
+.author-Mykee      { background: #d4edda; color: #155724; }
+.author-NezNorlag  { background: #f8d7da; color: #721c24; }
+
+.dir-badge { font-size: 12px; padding: 3px 8px; border-radius: 4px; background: #f0f0f0; color: #888; margin-left: 8px; }
+
+/* 模糊搜索：命中字母红色高亮 */
+.hl-red { color: #d32f2f; background: #ffebee; border-radius: 3px; padding: 0 2px; font-weight: 700; }
+.match-badge { font-size: 12px; padding: 3px 9px; border-radius: 4px; font-weight: 500; margin-left: 4px; white-space: nowrap; }
+.mb-fuzzy0 { background: #fff8e1; color: #b26a00; }
+.mb-fuzzy1 { background: #ffebee; color: #c62828; }
+
+/* 右上角菜单（备用） */
+.menu-toggle {
+  position: fixed; top: 14px; right: 14px; width: 46px; height: 46px;
+  background: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px;
+  font-size: 22px; color: #333; cursor: pointer; z-index: 300;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+}
+.menu-toggle:hover { border-color: #aaa; background: #fafafa; }
+.menu-panel {
+  position: fixed; top: 66px; right: 14px; width: 260px; background: #fff;
+  border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  z-index: 299; display: none; overflow: hidden;
+}
+.menu-panel.open { display: block; }
+.menu-item {
+  display: block; padding: 12px 16px; font-size: 15px; color: #333;
+  text-decoration: none; cursor: pointer; border-bottom: 1px solid #f2f2f2; user-select: none;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:hover { background: #f5f7f8; }
+.menu-footer { padding: 14px 16px 12px; font-size: 13px; color: #888; text-align: center; line-height: 1.6; }
+
+/* 获取异常提示横幅（条目不足 300 时显示） */
+.error-banner {
+  display: none; background: #fff3e0; border: 1.5px solid #ffb74d; color: #d84315;
+  border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; font-size: 15px; line-height: 1.8;
+}
+.error-banner.show { display: block; }
+.error-banner .banner-title { font-weight: 700; margin-bottom: 6px; font-size: 17px; }
+.error-banner b { color: #bf360c; }
+.error-links { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.error-links a { color: #bf360c; font-weight: 500; text-decoration: none; word-break: break-all; font-size: 14px; }
+.error-links a:hover { text-decoration: underline; }
+.banner-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.banner-actions button {
+  padding: 10px 18px; background: #ef6c00; color: #fff; border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.banner-actions button:hover { background: #e65100; }
+.banner-actions button.close-btn { background: transparent; color: #e65100; border: 1.5px solid #ffb74d; }
+.banner-actions button.close-btn:hover { background: #ffe0b2; }
+
+.loader { display: none; text-align: center; padding: 48px 20px; color: #555; font-size: 16px; line-height: 1.8; }
+.loader.active { display: block; }
+.loader::after {
+  content: ''; display: block; width: 44px; height: 44px; margin: 22px auto;
+  border: 4px solid #e0e0e0; border-top: 4px solid #1976d2; border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: 48px 20px; color: #555; font-size: 16px; }
+.empty-hint { font-size: 14px; color: #999; margin-top: 10px; line-height: 1.7; }
+
+.scroll-top-btn {
+  position: fixed; bottom: 20px; right: 20px; width: 54px; height: 54px;
+  background: #444; color: #fff; border: none; border-radius: 50%;
+  font-size: 24px; cursor: pointer; display: none; z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18); transition: all 0.2s;
+}
+.scroll-top-btn:hover { background: #222; }
+
+/* 链接卡片 */
+.links-section { margin-top: 20px; }
+.links-title { font-size: 16px; color: #555; margin-bottom: 12px; font-weight: 600; }
+.link-card {
+  background: #ffffff; border-radius: 10px; padding: 16px; margin-bottom: 10px;
+  border: 1px solid #e8e8e8; transition: all 0.2s;
+}
+.link-card:hover { border-color: #bbb; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.link-card a { color: #444; text-decoration: none; font-size: 15px; font-weight: 500; }
+.link-card a:hover { color: #1976d2; }
+.link-desc { font-size: 14px; color: #888; margin-bottom: 7px; }
+
+.page-footer { text-align: center; margin-top: 24px; padding: 18px; color: #999; font-size: 14px; border-top: 1px solid #e8e8e8; }
+
+@media (max-width: 768px) {
+  .container { padding: 12px; }
+  h1 { padding: 0 56px; font-size: 1.25rem; }
+  .input-group { flex-direction: column; }
+  .input-group input { min-width: 100%; }
+  .filter-row { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; }
+  .filter-btn { font-size: 11px; padding: 4px 8px; }
+}
+</style>
+</head>
+<body>
+<!-- 右上角菜单（备用，可后续扩展） -->
+<button class="menu-toggle" id="menuToggle" title="菜单" aria-label="菜单">☰</button>
+<div class="menu-panel" id="menuPanel">
+  <a class="menu-item" onclick="window.open('https://ld-guide.chino.icu/zh/models/','_blank'); closeMenu();">📖 Local Dream 官方页面</a>
+  <a class="menu-item" onclick="document.getElementById('linksAnchor').scrollIntoView({behavior:'smooth'}); closeMenu();">🔍 手动查询</a>
+  <div class="menu-footer">由三点水开发 · <span id="versionDisplay">v1.0.0</span><br>有问题请在Q群@我</div>
+</div>
+
+<div class="container">
+  <h1>Local Dream 模型获取</h1>
+  <div class="author-info">三点水IN@bilibili &nbsp;|&nbsp; Q群: 1107496773</div>
+
+  <div class="search-section">
+    <div class="input-group">
+      <input type="text" id="searchInput" placeholder="搜索文件名 / 目录（字母模糊匹配，容忍 1 个字母偏差）" autofocus>
+    </div>
+
+    <!-- 数据状态卡片：显示数据来源时间与是否最新 -->
+    <div class="data-status-card">
+      <div class="status-line">
+        <span class="status-dot dot-fetching" id="statusDot"></span>
+        <span class="status-text" id="statusText">正在从 hf-mirror.com 获取数据…</span>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadAllModels()">🔄 立即刷新</button>
+      </div>
+      <div class="progress-wrap" id="progressWrap" style="display:none;">
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+        <div class="progress-label" id="progressLabel">准备中…</div>
+      </div>
+      <div class="result-line">
+        <span class="badge" id="resultBadge">共 - 个条目</span>
+      </div>
+    </div>
+
+    <div class="sort-row" id="sortRow" style="display:none;">
+      <span class="sort-label">排序：</span>
+      <button class="sort-btn active" data-sort="name" onclick="sortModels('name')">📝 名称</button>
+      <button class="sort-btn" data-sort="size" onclick="sortModels('size')">💾 大小</button>
+      <button class="sort-btn" data-sort="time" onclick="sortModels('time')">📅 时间</button>
+      <button class="sort-btn" data-sort="likes" onclick="sortModels('likes')">❤️ 收藏</button>
+    </div>
+
+    <!-- 作者筛选 -->
+    <div class="filter-section" id="authorFilters" style="display:none;">
+      <div class="filter-title">作者</div>
+      <div class="filter-row">
+        <button class="filter-btn active" data-author="all" onclick="filterAuthor('all')">全部</button>
+        <button class="filter-btn" data-author="xororz" onclick="filterAuthor('xororz')">xororz</button>
+        <button class="filter-btn" data-author="YuuiKurata" onclick="filterAuthor('YuuiKurata')">YuuiKurata</button>
+        <button class="filter-btn" data-author="Mr-J-369" onclick="filterAuthor('Mr-J-369')">Mr-J-369</button>
+        <button class="filter-btn" data-author="Mykee" onclick="filterAuthor('Mykee')">Mykee</button>
+        <button class="filter-btn" data-author="Nez-Norlag" onclick="filterAuthor('Nez-Norlag')">Nez-Norlag</button>
+      </div>
+    </div>
+
+    <!-- 基模筛选 -->
+    <div class="filter-section" id="baseFilters" style="display:none;">
+      <div class="filter-title">基模</div>
+      <div class="filter-row">
+        <button class="filter-btn active" data-base="all" onclick="filterBase('all')">全部</button>
+        <button class="filter-btn" data-base="sd15" onclick="filterBase('sd15')">SD1.5</button>
+        <button class="filter-btn" data-base="sdxl" onclick="filterBase('sdxl')">SDXL</button>
+        <button class="filter-btn" data-base="dmd2" onclick="filterBase('dmd2')">SDXL-DMD2</button>
+        <button class="filter-btn" data-base="anime" onclick="filterBase('anime')">Anima</button>
+        <button class="filter-btn" data-base="ups" onclick="filterBase('ups')">超分辨率</button>
+      </div>
+      <div class="filter-desc" id="baseDesc"></div>
+    </div>
+
+    <!-- 效果筛选 -->
+    <div class="filter-section" id="effectFilters" style="display:none;">
+      <div class="filter-title">效果</div>
+      <div class="filter-row">
+        <button class="filter-btn active" data-effect="all" onclick="filterEffect('all')">全部</button>
+        <button class="filter-btn" data-effect="real" onclick="filterEffect('real')">真实</button>
+        <button class="filter-btn" data-effect="anime" onclick="filterEffect('anime')">动漫</button>
+        <button class="filter-btn" data-effect="illus" onclick="filterEffect('illus')">Illustrious</button>
+        <button class="filter-btn" data-effect="pony" onclick="filterEffect('pony')">Pony/PDXL</button>
+      </div>
+      <div class="filter-desc" id="effectDesc"></div>
+    </div>
+  </div>
+
+  <!-- 获取异常提示：条目不足 300 时显示 -->
+  <div class="error-banner" id="errorBanner">
+    <div class="banner-title">⚠ 数据获取不完整</div>
+    <div class="banner-text">仅获取到 <b id="errorCount">0</b> 个条目（正常应超过 <b>300</b> 个），可能是无法连接到 hf-mirror.com 或部分仓库请求失败。请点击以下链接确认网络是否可连通：</div>
+    <div class="error-links">
+      <a href="https://hf-mirror.com/" target="_blank">🔗 https://hf-mirror.com/（主站连通性测试）</a>
+      <a href="https://hf-mirror.com/xororz/sdxl-qnn/tree/main" target="_blank">🔗 https://hf-mirror.com/xororz/sdxl-qnn/tree/main（仓库连通性测试）</a>
+      <a href="https://ld-guide.chino.icu/zh/models/" target="_blank">🔗 https://ld-guide.chino.icu/zh/models/（Local Dream 官方页面）</a>
+    </div>
+    <div class="banner-actions">
+      <button onclick="loadAllModels()">🔄 重新加载</button>
+      <button class="close-btn" onclick="document.getElementById('errorBanner').classList.remove('show')">✕ 关闭提示</button>
+    </div>
+  </div>
+
+  <div class="loader" id="mainLoader"><div>首次加载中：正在从 hf-mirror.com 获取数据<br>通常需要 10 ~ 30 秒，请稍候…</div></div>
+  <div class="files-grid" id="filesGrid"></div>
+
+  <!-- 官方链接 -->
+  <span id="linksAnchor"></span>
+  <div class="links-section">
+    <div class="links-title">您可以尝试通过链接自行查找</div>
+    <div class="link-card"><div class="link-desc">Local Dream 官方页面</div><a href="https://ld-guide.chino.icu/zh/models/" target="_blank">🔗 ld-guide.chino.icu/zh/models/</a></div>
+    <div class="link-card"><div class="link-desc">xororz - SDXL QNN 模型</div><a href="https://hf-mirror.com/xororz/sdxl-qnn/tree/main" target="_blank">🔗 hf-mirror.com/xororz/sdxl-qnn/tree/main</a></div>
+    <div class="link-card"><div class="link-desc">xororz - Anima 模型</div><a href="https://hf-mirror.com/xororz/anima-qnn/tree/main" target="_blank">🔗 hf-mirror.com/xororz/anima-qnn/tree/main</a></div>
+    <div class="link-card"><div class="link-desc">xororz - SD1.5+ QNN 模型</div><a href="https://hf-mirror.com/xororz/sd-qnn/tree/main" target="_blank">🔗 hf-mirror.com/xororz/sd-qnn/tree/main</a></div>
+    <div class="link-card"><div class="link-desc">xororz - 超分辨率修复模型</div><a href="https://hf-mirror.com/xororz/upscaler" target="_blank">🔗 hf-mirror.com/xororz/upscaler</a></div>
+    <div class="link-card"><div class="link-desc">YuuiKurata - SDXL 动漫模型（收藏于 anime 集合）</div><a href="https://hf-mirror.com/collections/YuuiKurata/anime" target="_blank">🔗 hf-mirror.com/collections/YuuiKurata/anime</a></div>
+    <div class="link-card"><div class="link-desc">YuuiKurata - SDXL 现实模型（收藏于 realistic 集合）</div><a href="https://hf-mirror.com/collections/YuuiKurata/realistic" target="_blank">🔗 hf-mirror.com/collections/YuuiKurata/realistic</a></div>
+    <div class="link-card"><div class="link-desc">Mr-J-369 - SDXL 模型</div><a href="https://hf-mirror.com/collections/Mr-J-369/sdxl-qnn" target="_blank">🔗 hf-mirror.com/collections/Mr-J-369/sdxl-qnn</a></div>
+    <div class="link-card"><div class="link-desc">Mr-J-369 - SD1.5 模型</div><a href="https://hf-mirror.com/collections/Mr-J-369/sd-15-qnn" target="_blank">🔗 hf-mirror.com/collections/Mr-J-369/sd-15-qnn</a></div>
+    <div class="link-card"><div class="link-desc">Mr-J-369 - 超分辨率修复模型</div><a href="https://hf-mirror.com/collections/Mr-J-369/upscale-qnn" target="_blank">🔗 hf-mirror.com/collections/Mr-J-369/upscale-qnn</a></div>
+    <div class="link-card"><div class="link-desc">Mr-J-369 - 再蒸馏的 SDXL 模型</div><a href="https://hf-mirror.com/collections/Mr-J-369/sdxl-int4-qnn" target="_blank">🔗 hf-mirror.com/collections/Mr-J-369/sdxl-int4-qnn</a></div>
+    <div class="link-card"><div class="link-desc">Mykee - SD1.5 模型</div><a href="https://hf-mirror.com/Mykee/SD_1.5_NPU_models_for_Local_Dream/tree/main" target="_blank">🔗 hf-mirror.com/Mykee/SD_1.5_NPU_models_for_Local_Dream/tree/main</a></div>
+    <div class="link-card"><div class="link-desc">Nez-Norlag - SDXL 模型</div><a href="https://hf-mirror.com/Nez-Norlag/models" target="_blank">🔗 hf-mirror.com/Nez-Norlag/models</a></div>
+    <div class="link-card"><div class="link-desc">Lycra - SD1.5 模型</div><a href="https://hf-mirror.com/Lycra/Sweet-mix-v2.2-flat-SD1.5-qnn2.28" target="_blank">🔗 hf-mirror.com/Lycra/Sweet-mix-v2.2-flat-SD1.5-qnn2.28</a></div>
+    <div class="link-card"><div class="link-desc">CelesteImperia - SDXL 模型</div><a href="https://hf-mirror.com/CelesteImperia/SDXL-QNN" target="_blank">🔗 hf-mirror.com/CelesteImperia/SDXL-QNN</a></div>
+    <div class="link-card"><div class="link-desc">rlsl0422 - SDXL 模型</div><a href="https://hf-mirror.com/rlsl0422/MiaoMiao_RealSkin_qnn2.28" target="_blank">🔗 hf-mirror.com/rlsl0422/MiaoMiao_RealSkin_qnn2.28</a></div>
+  </div>
+
+  <div class="page-footer">三点水IN@bilibili-Q群:1107496773</div>
+  <button class="scroll-top-btn" id="scrollTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+</div>
+
+<script>
+const APP_VERSION = 'v1.0.0';              // ★ 版本号，更新时修改此值
+const API_BASE = 'https://hf-mirror.com/api';
+const MIN_ITEMS_WARN = 300;              // 条目数低于此值时提示网络/获取异常
+const CACHE_KEY = 'ld_qnn_models_cache_v1';
+const CACHE_FRESH_MS = 10 * 60 * 1000;   // 10 分钟内视为"最新"，超过则提示过期并自动刷新
+let allItems = [];
+let currentAuthor = 'all';
+let currentBase = 'all';
+let currentEffect = 'all';
+let currentSort = 'name';
+let searchQuery = '';
+
+/* ========== 数据新鲜度状态 ========== */
+let dataFetchedAt = 0;       // 当前展示数据的获取时间戳
+let isFetching = false;      // 是否正在获取
+let lastFetchFailed = false; // 上一次获取是否完全失败（0 条目）
+let fetchStepLabel = '准备中';
+
+/* ========== 规则定义 ========== */
+
+// 1. 必须获取目录下所有文件的链接 (tree/main)
+// effects: 额外强制的效果标签（数组），会和文件名推断的结果合并
+const FETCH_TREE_MODELS = [
+  { author: 'xororz',     modelId: 'xororz/sdxl-qnn',       base: 'sdxl',  effects: [] },
+  { author: 'xororz',     modelId: 'xororz/anima-qnn',      base: 'anime', effects: ['anime'] },  // Anime 基模（Anima-Turbo 架构）仅限此集合，效果为动漫
+  { author: 'xororz',     modelId: 'xororz/sd-qnn',         base: 'sd15',  effects: [] },
+  { author: 'Mykee',      modelId: 'Mykee/SD_1.5_NPU_models_for_Local_Dream', base: 'sd15', effects: [] },
+];
+
+// 2. Collection 获取的模型（指定 collection slug）
+const MRJ_COLLECTIONS = [
+  { slug: 'sdxl-qnn',  author: 'Mr-J-369', base: '' },
+  { slug: 'sd-15-qnn', author: 'Mr-J-369', base: 'sd15' },
+  { slug: 'upscale-qnn', author: 'Mr-J-369', base: 'ups' },
+  { slug: 'sdxl-int4-qnn', author: 'Mr-J-369', base: 'sdxl' },  // 再蒸馏的 SDXL
+];
+
+// 2b. 额外的 collection，其模型 ID 用于给其他来源（如 ALL_AUTHOR_MODELS）补充效果标签
+const YUUI_COLLECTION_EFFECTS = [
+  { owner: 'YuuiKurata', slug: 'anime',     effect: 'anime' },   // anime 集合 → 动漫
+  { owner: 'YuuiKurata', slug: 'realistic', effect: 'real'  },   // realistic 集合 → 真实
+];
+
+// 3. 获取作者全部模型（不按关键词筛选）
+// YuuiKurata 的所有模型都获取，效果由关键词推断，并复制 _DMD2 版本
+const ALL_AUTHOR_MODELS = [
+  { author: 'YuuiKurata', base: 'sdxl', dmd2Suffix: true },
+  { author: 'Nez-Norlag', base: 'sdxl' },
+];
+
+/* ========== 辅助函数 ========== */
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function formatSize(b) {
+  if (!b || b === 0) return '-';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(2) + ' GB';
+}
+
+// 从模型ID推断基模（优先用 tags，fallback 到 modelId）
+// 注意：Anime 基模（Anima-Turbo 架构）仅在 xororz/anima-qnn 集合中，不由关键词推断
+function inferBaseFromModelId(modelId, tags) {
+  const lower = modelId.toLowerCase();
+  const tagLower = tags && Array.isArray(tags) ? tags.join(' ') : '';
+  // 最高优先级：名称中包含 dmd → SDXL-DMD2
+  if (lower.includes('dmd') || tagLower.includes('dmd')) return 'dmd2';
+  // tags 是 API 返回的，总是小写，最可靠
+  if (tags && Array.isArray(tags)) {
+    if (tagLower.includes('sdxl')) return 'sdxl';
+    if (tagLower.includes('sd1.5')) return 'sd15';
+    if (tagLower.includes('upscale')) return 'ups';
+  }
+  // fallback: 模型ID（小写）
+  if (lower.includes('sdxl')) return 'sdxl';
+  if (lower.includes('sd1.5') || lower.includes('sd15')) return 'sd15';
+  if (lower.includes('upscale')) return 'ups';
+  return '';
+}
+
+// 从模型ID推断效果（优先用 tags，总是小写）
+// 返回所有匹配的效果数组（可同时匹配多个，如 Illustrious + Pony + 动漫）
+// 注意：Illustrious 自动归入动漫效果，且动漫优先级高于 Illustrious
+function inferEffectFromModelId(modelId, tags) {
+  const lower = modelId.toLowerCase();
+  const tagLower = tags && Array.isArray(tags) ? tags.join(' ') : '';
+  const effects = [];
+  const source = tagLower + ' ' + lower;
+  if (source.includes('real') || source.includes('portrait')) effects.push('real');
+  if (source.includes('anime') || source.includes('animagine')) effects.push('anime');
+  if (source.includes('illus') || source.includes('illust')) { effects.push('anime'); effects.push('illus'); }
+  if (source.includes('pony') || source.includes('pdxl')) effects.push('pony');
+  return [...new Set(effects)];
+}
+
+// 从文件名推断基模（用于 tree 目录下的文件）
+// 注意：Anime 基模不由文件名推断，仅在 anima-qnn 集合配置中设置
+function inferBaseFromFile(fileName, modelBase) {
+  const lower = fileName.toLowerCase();
+  // 最高优先级：包含 dmd → SDXL-DMD2
+  if (lower.includes('dmd')) return 'dmd2';
+  if (lower.includes('sdxl')) return 'sdxl';
+  if (lower.includes('sd1.5') || lower.includes('sd15')) return 'sd15';
+  if (lower.includes('upscale')) return 'ups';
+  return modelBase;
+}
+
+// 从文件名推断效果（返回所有匹配的效果数组）
+// 注意：Illustrious 自动归入动漫效果，且动漫优先级高于 Illustrious
+function inferEffectFromFile(fileName) {
+  const lower = fileName.toLowerCase();
+  const effects = [];
+  if (lower.includes('real') || lower.includes('portrait')) effects.push('real');
+  if (lower.includes('anime') || lower.includes('animagine')) effects.push('anime');
+  if (lower.includes('illus') || lower.includes('illust')) { effects.push('anime'); effects.push('illus'); }
+  if (lower.includes('pony') || lower.includes('pdxl')) effects.push('pony');
+  return [...new Set(effects)];
+}
+
+/* ========== 模糊搜索 ========== */
+
+// HTML 转义（防止文件名中的特殊字符破坏页面）
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// 模糊匹配：把搜索词拆成单个字母，按顺序在文件名中查找（子序列匹配），
+// 允许 maxMiss 个字母偏差（拼错/多余的字母自动跳过）。
+// 返回 { positions: Set(命中下标), miss: 偏差数, exact: 是否精确子串 }；不匹配返回 null。
+function fuzzyMatch(query, text) {
+  const lower = text.toLowerCase();
+  // 小写后长度不变时，下标才能与原文对齐（常规文件名均满足）
+  const aligned = lower.length === text.length;
+
+  // 1) 精确子串优先：整段连续标红
+  const idx = aligned ? lower.indexOf(query) : -1;
+  if (idx !== -1) {
+    const positions = new Set();
+    for (let i = 0; i < query.length; i++) positions.add(idx + i);
+    return { positions, miss: 0, exact: true };
+  }
+
+  // 2) 字母拆分子序列匹配
+  const qLen = query.length;
+  const tLen = text.length;
+  // 搜索词太短时禁用偏差（1~2 个字母若允许偏差会命中几乎所有条目）
+  const maxMiss = qLen >= 3 ? 1 : 0;
+  if (qLen > tLen + maxMiss) return null;
+
+  const positions = new Set();
+  let miss = 0;
+  let pos = 0;
+  for (let qi = 0; qi < qLen; qi++) {
+    const ch = query[qi];
+    let found = -1;
+    for (let ti = pos; ti < tLen; ti++) {
+      if (text[ti].toLowerCase() === ch) { found = ti; break; }
+    }
+    if (found !== -1) {
+      positions.add(found);
+      pos = found + 1;
+    } else {
+      miss++;
+      if (miss > maxMiss) return null; // 偏差超过允许数量
+    }
+  }
+  return { positions, miss, exact: false };
+}
+
+// 把文件名中命中的字母标红，其余字符正常转义输出
+function highlightName(text, match) {
+  if (!match || !match.positions || match.positions.size === 0) return escapeHtml(text);
+  const positions = match.positions;
+  let html = '';
+  let i = 0;
+  while (i < text.length) {
+    const hit = positions.has(i);
+    let j = i + 1;
+    while (j < text.length && positions.has(j) === hit) j++;
+    const seg = escapeHtml(text.slice(i, j));
+    html += hit ? '<span class="hl-red">' + seg + '</span>' : seg;
+    i = j;
+  }
+  return html;
+}
+
+/* ========== 缓存（让用户知道数据是否为最新） ========== */
+
+function saveCache(items) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), items })); } catch {}
+}
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || !Array.isArray(d.items) || !d.t) return null;
+    return d;
+  } catch { return null; }
+}
+function clearCacheAndReload() {
+  try { localStorage.removeItem(CACHE_KEY); } catch {}
+  allItems = [];
+  dataFetchedAt = 0;
+  clearGrid();
+  loadAllModels();
+}
+
+// 相对时间：刚刚 / N 分钟前 / N 小时前 / N 天前
+function timeAgo(ts) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return '刚刚';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + ' 分钟前';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + ' 小时前';
+  return Math.floor(h / 24) + ' 天前';
+}
+function clockTime(ts) {
+  return new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+// 更新状态卡片：状态灯 + 文字 + 刷新按钮，让用户始终知道数据新旧
+function updateDataStatus() {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const btn = document.getElementById('refreshBtn');
+  dot.className = 'status-dot';
+
+  if (isFetching) {
+    dot.classList.add('dot-fetching');
+    text.textContent = '⏳ 正在从 hf 网站拉取数据';
+    btn.textContent = '⏳ 获取中…';
+    btn.disabled = true;
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔄 立即刷新';
+
+  if (allItems.length === 0) {
+    dot.classList.add('dot-error');
+    text.textContent = '暂无数据 · 点击「立即刷新」获取';
+    return;
+  }
+  if (lastFetchFailed) {
+    dot.classList.add('dot-error');
+    text.textContent = `⚠ 上次获取失败 · 显示 ${timeAgo(dataFetchedAt)}的缓存`;
+    return;
+  }
+
+  // 条目数由下方徽标展示，此处只留时间信息，保证状态行单行显示
+  const timeInfo = `${clockTime(dataFetchedAt)}（${timeAgo(dataFetchedAt)}）`;
+  if (allItems.length < MIN_ITEMS_WARN) {
+    dot.classList.add('dot-error');
+    text.textContent = `⚠ 数据不完整 · ${timeInfo} · 建议刷新`;
+    return;
+  }
+  if (Date.now() - dataFetchedAt <= CACHE_FRESH_MS) {
+    dot.classList.add('dot-fresh');
+    text.textContent = `✅ 最新 · ${timeInfo}`;
+  } else {
+    dot.classList.add('dot-stale');
+    text.textContent = `🕘 ${timeAgo(dataFetchedAt)}前获取 · 建议刷新`;
+  }
+}
+
+/* ========== API 调用 ========== */
+
+async function getFiles(modelId) {
+  try {
+    const parts = modelId.split('/');
+    const resp = await fetch(`${API_BASE}/models/${encodeURIComponent(parts[0])}/${encodeURIComponent(parts[1])}/tree/main?recursive=true&expand=yes`, { mode: 'cors' });
+    if (!resp.ok) return [];
+    return await resp.json();
+  } catch { return []; }
+}
+
+async function getAuthorModels(author, limit = 100) {
+  try {
+    const resp = await fetch(`${API_BASE}/models?author=${encodeURIComponent(author)}&limit=${limit}`, { mode: 'cors' });
+    if (!resp.ok) return [];
+    return await resp.json();
+  } catch { return []; }
+}
+
+// 获取 collection 中的模型列表
+async function getCollectionModels(owner, slug) {
+  try {
+    const resp = await fetch(`${API_BASE}/collections/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}`, { mode: 'cors' });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    if (!data.items) return [];
+    return data.items.map(item => ({
+      modelId: item.id,
+      tags: [],
+      likes: item.likes || 0,
+      createdAt: item.lastModified,
+      lastModified: item.lastModified
+    }));
+  } catch { return []; }
+}
+
+async function getModelInfo(modelId) {
+  try {
+    const resp = await fetch(`${API_BASE}/models/${encodeURIComponent(modelId)}`, { mode: 'cors' });
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch { return null; }
+}
+
+/* ========== 主加载流程 ========== */
+
+async function loadAllModels() {
+  if (isFetching) return; // 防止重复点击
+  isFetching = true;
+  fetchStepLabel = '准备中';
+
+  const hadData = allItems.length > 0;
+  // 首次（无数据）才显示大加载动画；已有缓存数据时保留列表，静默后台刷新
+  if (!hadData) { showLoader(true); clearGrid(); }
+
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('errorBanner').classList.remove('show');
+  updateDataStatus();
+
+  const newItems = [];
+  let total = 0;
+  let cur = 0;
+
+  // 预加载：获取 YuuiKurata 的 anime/realistic 集合的模型 ID（用于补充效果标签）
+  // yuuiEffectMap: modelId → ['anime'] / ['real'] 等
+  let yuuiEffectMap = {};
+  for (const col of YUUI_COLLECTION_EFFECTS) {
+    try {
+      const colModels = await getCollectionModels(col.owner, col.slug);
+      if (Array.isArray(colModels)) {
+        colModels.forEach(m => {
+          if (!yuuiEffectMap[m.modelId]) yuuiEffectMap[m.modelId] = [];
+          yuuiEffectMap[m.modelId].push(col.effect);
+        });
+      }
+    } catch {}
+  }
+
+  // 统计总步骤
+  total += FETCH_TREE_MODELS.length;
+  total += MRJ_COLLECTIONS.length;
+  total += ALL_AUTHOR_MODELS.length;
+
+  /* ----- 步骤1: 获取 tree/main 目录下的全部文件 ----- */
+  for (const m of FETCH_TREE_MODELS) {
+    cur++;
+    updateProgress(cur, total, `${m.modelId} 的文件列表`);
+
+    const files = await getFiles(m.modelId);
+    const info = await getModelInfo(m.modelId);
+
+    // 优先用 lastCommit.date（精确到文件级）
+    for (const f of files) {
+      if (f.type === 'file' && f.path !== '.gitattributes') {
+        const modTime = (f.lastCommit && f.lastCommit.date) || info?.lastModified || info?.createdAt;
+        const created = modTime ? new Date(modTime).toLocaleDateString() : '-';
+        const createdTime = modTime ? new Date(modTime).getTime() : 0;
+        newItems.push({
+          fileName: f.path,
+          fileSize: f.size || 0,
+          modelId: m.modelId,
+          author: m.author,
+          base: inferBaseFromFile(f.path, m.base),
+          effects: [...new Set([...(m.effects || []), ...inferEffectFromFile(f.path)])],
+          isFile: true,
+          created: created,
+          createdTime: createdTime,
+          likes: info?.likes || 0,
+          sourceLabel: m.modelId
+        });
+      }
+    }
+    await sleep(200);
+  }
+
+  /* ----- 步骤2: 获取 Mr-J-369 的 collection 模型 ----- */
+  for (const col of MRJ_COLLECTIONS) {
+    cur++;
+    updateProgress(cur, total, `${col.author} 的 ${col.slug} 合集`);
+
+    const models = await getCollectionModels(col.author, col.slug);
+    if (!Array.isArray(models)) continue;
+
+    // 按时间倒序
+    models.sort((a, b) => {
+      const tA = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+      const tB = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+      return tB - tA;
+    });
+
+    for (const model of models) {
+      const modelId = model.modelId;
+      const shortName = modelId.replace(col.author + '/', '');
+      const created = model.lastModified ? new Date(model.lastModified).toLocaleDateString() : '-';
+      const createdTime = model.lastModified ? new Date(model.lastModified).getTime() : 0;
+
+      const base = inferBaseFromModelId(modelId, model.tags) || col.base;
+      const effects = inferEffectFromModelId(modelId, model.tags);
+
+      // 原始条目
+      newItems.push({
+        fileName: shortName,
+        fileSize: 0,
+        modelId: modelId,
+        author: col.author,
+        base: base,
+        effects: effects,
+        isFile: false,
+        created: created,
+        createdTime: createdTime,
+        likes: model.likes || 0,
+        sourceLabel: col.slug
+      });
+    }
+    await sleep(200);
+  }
+
+  /* ----- 步骤3: 获取作者全部模型 ----- */
+  for (const cfg of ALL_AUTHOR_MODELS) {
+    cur++;
+    updateProgress(cur, total, `${cfg.author} 的全部模型`);
+
+    const models = await getAuthorModels(cfg.author);
+    if (!Array.isArray(models)) continue;
+
+    // 按时间倒序
+    models.sort((a, b) => {
+      const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tB - tA;
+    });
+
+    for (const model of models) {
+      const modelId = model.modelId || model.id;
+      const shortName = modelId.replace(cfg.author + '/', '');
+      const created = model.createdAt ? new Date(model.createdAt).toLocaleDateString() : '-';
+      const createdTime = model.createdAt ? new Date(model.createdAt).getTime() : 0;
+
+      const base = inferBaseFromModelId(modelId, model.tags) || cfg.base;
+      let effects = inferEffectFromModelId(modelId, model.tags);
+
+      // 如果该模型在 YuuiKurata 的集合中，补充对应的效果标签（动漫/真实，优先级最高，排在最前）
+      const colEffects = yuuiEffectMap[modelId];
+      if (colEffects) {
+        colEffects.forEach(eff => {
+          if (!effects.includes(eff)) effects.unshift(eff);
+        });
+      }
+
+      // 原始条目
+      newItems.push({
+        fileName: shortName,
+        fileSize: 0,
+        modelId: modelId,
+        author: cfg.author,
+        base: base,
+        effects: effects,
+        isFile: false,
+        created: created,
+        createdTime: createdTime,
+        likes: model.likes || 0,
+        sourceLabel: cfg.author
+      });
+
+      // DMD2 版本条目（仅 YuuiKurata）
+      if (cfg.dmd2Suffix) {
+        newItems.push({
+          fileName: shortName + '_DMD2',
+          fileSize: 0,
+          modelId: modelId,
+          author: cfg.author,
+          base: 'dmd2',
+          effects: effects,
+          isFile: false,
+          created: created,
+          createdTime: createdTime,
+          likes: model.likes || 0,
+          sourceLabel: cfg.author
+        });
+      }
+    }
+    await sleep(200);
+  }
+
+  updateProgress(total, total, '完成');
+  isFetching = false;
+  document.getElementById('progressWrap').style.display = 'none';
+  showLoader(false);
+
+  if (newItems.length > 0) {
+    // 获取成功：更新数据、记录时间、写入缓存
+    allItems = newItems;
+    dataFetchedAt = Date.now();
+    // 条目不完整（低于阈值）时不写入缓存，避免下次打开误把残缺数据当最新
+    if (newItems.length >= MIN_ITEMS_WARN) saveCache(allItems);
+    lastFetchFailed = false;
+  } else {
+    // 获取失败：保留已有缓存数据（若有），避免白屏
+    lastFetchFailed = true;
+    if (!hadData) allItems = [];
+  }
+
+  showControls();
+  renderItems();
+  checkLoadResult();
+  updateDataStatus();
+}
+
+/* ========== 加载结果检查 ========== */
+
+// 条目数不足阈值时显示错误提示（含链接，供用户确认网络连通性）
+function checkLoadResult() {
+  const banner = document.getElementById('errorBanner');
+  if (allItems.length >= MIN_ITEMS_WARN) {
+    banner.classList.remove('show');
+  } else {
+    document.getElementById('errorCount').textContent = allItems.length;
+    banner.classList.add('show');
+  }
+  updateDataStatus();
+}
+
+/* ========== 渲染 ========== */
+
+function renderItems() {
+  let filtered = allItems;
+
+  if (currentAuthor !== 'all') filtered = filtered.filter(f => f.author === currentAuthor);
+  if (currentBase !== 'all') filtered = filtered.filter(f => f.base === currentBase);
+  if (currentEffect !== 'all') filtered = filtered.filter(f => f.effects && f.effects.includes(currentEffect));
+  // 模糊搜索：字母拆分 + 子序列匹配 + 容忍 1 个字母偏差
+  let matchInfo = null;
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    const matched = [];
+    let exactCount = 0, fuzzy0Count = 0, fuzzy1Count = 0;
+    for (const item of filtered) {
+      const m = fuzzyMatch(q, item.fileName);
+      if (m) {
+        matched.push({ ...item, _match: m });
+        if (m.exact) exactCount++;
+        else if (m.miss === 0) fuzzy0Count++;
+        else fuzzy1Count++;
+      }
+    }
+    matchInfo = { exactCount, fuzzy0Count, fuzzy1Count };
+    filtered = matched;
+  }
+
+  // 排序：搜索时先按匹配程度（精确 > 模糊 > 偏差1），再按用户选择的排序方式
+  filtered = filtered.slice();
+  const userCmp =
+    currentSort === 'size'  ? (a, b) => b.fileSize - a.fileSize :
+    currentSort === 'time'  ? (a, b) => b.createdTime - a.createdTime :
+    currentSort === 'likes' ? (a, b) => b.likes - a.likes :
+                              (a, b) => a.fileName.localeCompare(b.fileName);
+  if (searchQuery && matchInfo) {
+    const rel = f => f._match.exact ? 0 : (f._match.miss === 0 ? 1 : 2);
+    filtered.sort((a, b) => rel(a) - rel(b) || userCmp(a, b));
+  } else {
+    filtered.sort(userCmp);
+  }
+
+  const grid = document.getElementById('filesGrid');
+
+  if (allItems.length === 0) {
+    document.getElementById('resultBadge').textContent = '共 0 个条目';
+    grid.innerHTML =
+      '<div class="empty-state"><p>📭 暂无数据</p>' +
+      '<p class="empty-hint">请点击上方「🔄 立即刷新」按钮获取模型列表<br>若反复失败，请用页面下方的链接自行访问 hf-mirror.com</p></div>';
+    return;
+  }
+
+  if (filtered.length === 0) {
+    document.getElementById('resultBadge').textContent = '显示 0 个';
+    grid.innerHTML =
+      '<div class="empty-state"><p>📭 没有找到匹配的条目</p>' +
+      '<p class="empty-hint">提示：搜索按字母模糊匹配并容忍 1 个字母偏差<br>可尝试减少字母或更换关键词</p></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(f => {
+    // 模糊匹配标记（精确匹配不显示标记）
+    const matchBadge = (!f._match || f._match.exact) ? '' :
+      `<span class="match-badge ${f._match.miss > 0 ? 'mb-fuzzy1' : 'mb-fuzzy0'}">${f._match.miss > 0 ? '模糊±1' : '模糊'}</span>`;
+
+    let baseBadge = '';
+    if (f.base === 'sd15')  baseBadge = '<span class="tag-base tag-sd15">SD1.5</span>';
+    else if (f.base === 'sdxl') baseBadge = '<span class="tag-base tag-sdxl">SDXL</span>';
+    else if (f.base === 'dmd2') baseBadge = '<span class="tag-base tag-dmd2">DMD2</span>';
+    else if (f.base === 'anime') baseBadge = '<span class="tag-base tag-anime">Anime</span>';
+    else if (f.base === 'ups') baseBadge = '<span class="tag-base tag-ups">超分</span>';
+
+    let efxBadges = '';
+    const efxMap = {
+      real:  '<span class="tag-efx tag-real">真实</span>',
+      anime: '<span class="tag-efx tag-anime2">动漫</span>',
+      illus: '<span class="tag-efx tag-illus">Illustrious</span>',
+      pony:  '<span class="tag-efx tag-pony">Pony</span>'
+    };
+    if (f.effects && Array.isArray(f.effects)) {
+      efxBadges = f.effects.map(e => efxMap[e] || '').join('');
+    }
+
+    if (f.isFile) {
+      const filePath = encodeURIComponent(f.fileName.replace(/^\/+/, ''));
+      return `
+        <div class="file-card" onclick="window.open('https://hf-mirror.com/${f.modelId}/blob/main/${filePath}','_blank')">
+          <div class="file-name">📄 ${highlightName(f.fileName, f._match)}</div>
+          <div class="file-meta">
+            <span class="model-source">📙 ${f.sourceLabel}</span>
+            <span class="meta-item">📅 ${f.created}</span>
+            <span class="meta-item">💾 ${formatSize(f.fileSize)}</span>
+            <span class="meta-item">❤️ ${f.likes}</span>
+          </div>
+          <div class="file-tags"><span class="author-tag author-${f.author.replace(/[-_]/g, '')}">${f.author}</span>${baseBadge}${efxBadges}${matchBadge}</div>
+        </div>`;
+    } else {
+      return `
+        <div class="file-card" onclick="window.open('https://hf-mirror.com/${f.modelId}/tree/main','_blank')">
+          <div class="file-name">📁 ${highlightName(f.fileName, f._match)}</div>
+          <div class="file-meta">
+            <span class="model-source">📙 ${f.sourceLabel}</span>
+            <span class="meta-item">📅 ${f.created}</span>
+            <span class="meta-item">❤️ ${f.likes}</span>
+          </div>
+          <div class="file-tags"><span class="author-tag author-${f.author.replace(/[-_]/g, '')}">${f.author}</span>${baseBadge}${efxBadges}${matchBadge}</div>
+        </div>`;
+    }
+  }).join('');
+
+  let badgeText = `显示 ${filtered.length} / 共 ${allItems.length} 个`;
+  if (matchInfo) {
+    const fuzzyTotal = matchInfo.fuzzy0Count + matchInfo.fuzzy1Count;
+    if (fuzzyTotal > 0) badgeText += `（精确 ${matchInfo.exactCount} · 模糊 ${fuzzyTotal}）`;
+  }
+  document.getElementById('resultBadge').textContent = badgeText;
+}
+
+/* ========== 筛选 & 排序 ========== */
+
+function filterAuthor(a) {
+  currentAuthor = a;
+  document.querySelectorAll('[data-author]').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-author="${a}"]`).classList.add('active');
+  renderItems();
+}
+
+function filterBase(b) {
+  currentBase = b;
+  document.querySelectorAll('[data-base]').forEach(x => x.classList.remove('active'));
+  document.querySelector(`[data-base="${b}"]`).classList.add('active');
+  const desc = document.getElementById('baseDesc');
+  const map = {
+    all: '显示所有基模类型',
+    sd15: 'SD1.5 系列：经典 Stable Diffusion 1.5 基础模型，不支持画师风格，骁龙 888 / 7+ Gen2 及以上均可运行，兼容性广泛',
+    sdxl: 'SDXL 系列：高分辨率基础模型，需骁龙 8 Gen3 及以上，细节和构图更丰富，生成质量更高',
+    dmd2: 'SDXL-DMD2 系列：基于 SDXL 的蒸馏加速版，速度很快，推理步数少，适合追求效率的场景',
+    anime: 'Anima 系列：专为动漫风格优化的模型，需骁龙 8 Gen3 及以上，提示词理解能力强，动漫风格质感最好',
+    ups: '超分辨率系列：提升图片清晰度和分辨率的修复类模型，适合图片放大和细节增强'
+  };
+  desc.textContent = map[b] || '';
+  desc.classList.toggle('open', b !== 'all');
+  renderItems();
+}
+
+function filterEffect(e) {
+  currentEffect = e;
+  document.querySelectorAll('[data-effect]').forEach(x => x.classList.remove('active'));
+  document.querySelector(`[data-effect="${e}"]`).classList.add('active');
+  const desc = document.getElementById('effectDesc');
+  const map = {
+    all: '显示所有效果类型',
+    real: '真实风格：偏向写实人像、风景、物体等，追求照片级真实感和光影质感',
+    anime: '动漫风格：二次元/动画/漫画风格，线条清晰，色彩鲜明，适合角色和场景创作',
+    illus: 'Illustrious 系列：基于 Illustrious 架构的动漫风格模型，对画师和角色支持更好，画风细腻',
+    pony: 'Pony/PDXL 系列：基于 Pony Diffusion 或 Pony 微调的 SDXL 模型，风格多样'
+  };
+  desc.textContent = map[e] || '';
+  desc.classList.toggle('open', e !== 'all');
+  renderItems();
+}
+
+function sortModels(s) {
+  currentSort = s;
+  document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-sort="${s}"]`).classList.add('active');
+  renderItems();
+}
+
+/* ========== 事件 ========== */
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  renderItems();
+});
+
+/* ========== 右上角菜单（备用） ========== */
+
+const menuToggle = document.getElementById('menuToggle');
+const menuPanel = document.getElementById('menuPanel');
+
+function closeMenu() { menuPanel.classList.remove('open'); }
+
+menuToggle.addEventListener('click', e => {
+  e.stopPropagation();
+  menuPanel.classList.toggle('open');
+});
+
+// 点击菜单外部时自动收起
+document.addEventListener('click', e => {
+  if (menuPanel.classList.contains('open') && !menuPanel.contains(e.target)) closeMenu();
+});
+
+/* ========== 工具 ========== */
+
+function showLoader(s) { document.getElementById('mainLoader').classList.toggle('active', s); }
+function clearGrid() { document.getElementById('filesGrid').innerHTML = ''; }
+function showControls() {
+  document.getElementById('authorFilters').style.display = 'block';
+  document.getElementById('baseFilters').style.display = 'block';
+  document.getElementById('effectFilters').style.display = 'block';
+  document.getElementById('sortRow').style.display = 'flex';
+}
+function updateProgress(cur, total, label) {
+  document.getElementById('progressFill').style.width = (cur / total) * 100 + '%';
+  fetchStepLabel = `第 ${cur} / ${total} 步 · ${label}`;
+  document.getElementById('progressLabel').textContent = fetchStepLabel;
+}
+
+// 每 30 秒刷新一次状态文字（让"X 分钟前"保持准确）
+setInterval(() => { if (!isFetching) updateDataStatus(); }, 30000);
+
+/* ========== 启动：优先显示缓存，过期才自动刷新 ========== */
+
+window.addEventListener('load', () => {
+  const cache = readCache();
+  if (cache && cache.items.length > 0) {
+    // 秒开：先显示本地缓存
+    allItems = cache.items;
+    dataFetchedAt = cache.t;
+    lastFetchFailed = false;
+    showControls();
+    renderItems();
+    updateDataStatus();
+    // 缓存超过 10 分钟 → 自动后台获取最新（不打断浏览）
+    if (Date.now() - cache.t > CACHE_FRESH_MS) loadAllModels();
+  } else {
+    loadAllModels();
+  }
+});
+
+window.addEventListener('scroll', () => {
+  document.getElementById('scrollTopBtn').style.display = window.scrollY > 300 ? 'block' : 'none';
+});
+
+// 设置版本号显示
+const verEl = document.getElementById('versionDisplay');
+if (verEl) verEl.textContent = APP_VERSION;
+</script>
+</body>
+</html>
