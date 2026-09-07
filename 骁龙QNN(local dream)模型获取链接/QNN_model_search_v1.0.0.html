@@ -1,39 +1,39 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Local Dream 模型获取</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f5f5f5; color: #2c2c2c;
-  min-height: 100vh; overflow-x: hidden; font-size: 15px;
-  zoom: 0.75; /* 整体缩小界面（等效降低 DPI），可在右上角菜单调整 */
+！doctype！doctype
+超文本标记语言 朗=
+>头<
+<元 字符集=>"UTF-8"
+元< 姓名="视口" 内容=>"宽度=设备宽度，初始比例=1.0，最大比例=1.0，用户可缩放=否"
+>标题Local<>梦想模型获取标题</
+>风格<
+* { 箱体尺寸: 边框框; 边缘: 0; 填充: 0; }
+身体 {
+字体系列：-苹果-系统，BlinkMacSystemFont，'Segoe UI'，Roboto，无衬线；
+背景：#f5f5f5；颜色：#2c2c2c；
+最小高度：100VH；overflow-x：隐藏的；字体大小：15px；
+缩放: 0.75; /* 整体缩小界面（等效降低 DPI），可在右上角菜单调整 */
 }
-.container { max-width: 1400px; margin: 0 auto; padding: 16px; }
-h1 { text-align: center; margin-bottom: 12px; color: #1a1a1a; font-size: clamp(1.3rem,4vw,2rem); font-weight: 600; letter-spacing: 0.5px; }
-.author-info { text-align: center; margin-bottom: 18px; color: #888; font-size: 15px; }
+.容器{最大宽度：1400px；边缘：0自动；填充：16px；}
+H1{文本对齐：中心；底边距：12px；颜色：#1a1a1a；字体大小：夹紧(1.3REM，4VW，2REM)；字体粗细：600；字母间距：0.5px；}
+.作者信息{文本对齐：中心；底边距：18PX；颜色：#888；字体大小：15px；}
 
 /* 搜索区域 */
-.search-section {
-  background: #ffffff; border-radius: 12px; padding: 18px; margin-bottom: 14px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  border: 1px solid #e8e8e8;
+.搜索部分{
+背景：#FFFFFF；边界半径：12px；填充：18px；底边距：14px；
+箱形阴影：02px8px RGBA(0,0,0,0.06);
+边界：1 PX固体#e8e8e8；
 }
-.input-group { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-.input-group input {
-  flex: 1; min-width: 200px; padding: 13px 16px; border: 1.5px solid #d5d5d5; border-radius: 8px;
-  background: #fafafa; color: #333; font-size: 16px; transition: all 0.2s;
+.输入组{显示：弯曲；差距：10PX；底边距：14px；柔性缠绕：包；}
+.输入组 输入 {
+弯曲：1；最小宽度：200px；填充：13px16px；边界：1.5px固体#d5d5d5；边界半径：8px；
+背景：#fafafa；颜色：#333；字体大小：16px；过渡：所有0.2s；
 }
-.input-group input:focus { outline: none; border-color: #1976d2; background: #fff; box-shadow: 0 0 0 3px rgba(25,118,210,0.12); }
-.input-group input::placeholder { color: #999; font-size: 15px; }
+.输入组输入：集中{概要：没有一个；边框颜色：#1976d2；背景：#FFF；箱形阴影：00003PX RGBA(25,118,210,0.12);}
+.输入组 输入::占位符 { 颜色: #999;字体大小: 15PX; }
 
 /* ===== 数据状态卡片：明确告知数据是否为最新 ===== */
-.data-status-card {
-  background: #f8f9fa; border: 1px solid #e3e5e8; border-radius: 10px;
-  padding: 8px 12px; margin-bottom: 10px;
+.数据状态卡 {
+背景：#f8f9fa；边距：1px固体#e3e5e8；边距半径：10px；
+填充：8px12px；底距：10px；
 }
 .status-line { display: flex; align-items: center; gap: 8px; }
 .status-dot {
