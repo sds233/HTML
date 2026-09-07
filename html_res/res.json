@@ -1,20 +1,20 @@
 {
-  "已更新""2026-09-07"：：
-"计数":3,
-  "列表": [
+  "updated""url""2026-09-07",
+  "count": 3,
+  "list": [
     {
-      "名称": "苗苗_RealSkin_v1.4",
-      "URL": "https://hf-mirror.com/rlsl0422/MiaoMiao_RealSkin_qnn2.28",
+      "name": "miaomiao_realskin_v1.4",
+      "url": "https://hf-mirror.com/rlsl0422/MiaoMiao_RealSkin_qnn2.28",
       "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/pic/miaomiao_realskin_v1.4.png"
     },
     {
-      "名称": "甜混合-v2.2-flat-SD1.5-qnn2.28",
-      "URL": "https://hf-mirror.com/Lycra/Sweet-mix-v2.2-flat-SD1.5-qnn2.28",
+      "name": "Sweet-mix-v2.2-flat-SD1.5-qnn2.28",
+      "url": "https://hf-mirror.com/Lycra/Sweet-mix-v2.2-flat-SD1.5-qnn2.28",
       "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/pic/sweetmix.png"
     },
     {
-      "名称": "anime-v3.0.safetensors",
-      "URL": "https://hf-mirror.com/xororz/anima-qnn/blob/main/anime-v3.0.safetensors",
+      "name": "anime-v3.0.safetensors",
+      "url": "https://hf-mirror.com/xororz/anima-qnn/blob/main/anime-v3.0.safetensors",
       "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/pic/anime-v3.png"
     }
   ]
