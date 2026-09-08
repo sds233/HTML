@@ -1,6 +1,6 @@
 {
   "updated": "2026-09-08",
-  "count": 2,
+  "count": 3,
   "list": [
     {
       "name": "miaomiao_realskin_v1.4",
@@ -11,6 +11,11 @@
       "name": "MajicmixRealisticV7",
       "url": "https://hf-mirror.com/xororz/sd-qnn/blob/main/MajicmixRealisticV7_qnn2.28_8gen1.zip",
       "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/MajicmixRealisticV7.png"
-    }
+    },
+    {
+      "name": "miaomiao_v1.4_turbo",
+      "url": "https://hf-mirror.com/xororz/anima-qnn/blob/main/miaomiao_v1.4_turbo_qnn2.28_8gen3.zip",
+      "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/miaomiao_v1.4_turbo.JPG"
+    },
   ]
 }
