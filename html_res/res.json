@@ -1,26 +1,26 @@
 {
-  "updated": "2026-09-08",
-  "count": 3,
-  "list": [
+"已更新"："2026-09-09"，"已更新": "URL"："https://hf-mirror.com/Mykee/SD_1.5_NPU_models_for_Local_Dream/tree/main"，，
+  "计数": 4,
+  "列表": [
     {
-      "name": "miaomiao_realskin_v1.4",
-      "url": "https://hf-mirror.com/xororz/sdxl-qnn/blob/main/miaomiao_realskin_v1.4_qnn2.28_8gen3.zip",
+      "名称": "苗苗_RealSkin_v1.4",
+      "URL": "https://hf-mirror.com/xororz/sdxl-qnn/blob/main/miaomiao_realskin_v1.4_qnn2.28_8gen3.zip",
       "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/miaomiao_realskin_v1.4.png"
     },
     {
-      "name": "MajicmixRealisticV7",
-      "url": "https://hf-mirror.com/xororz/sd-qnn/blob/main/MajicmixRealisticV7_qnn2.28_8gen1.zip",
+      "名称": "MajicmixRealisticV7",
+      "URL": "https://hf-mirror.com/xororz/sd-qnn/blob/main/MajicmixRealisticV7_qnn2.28_8gen1.zip",
       "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/MajicmixRealisticV7.png"
     },
     {
-      "name": "miaomiao_v1.4_turbo",
-      "url": "https://hf-mirror.com/xororz/anima-qnn/blob/main/miaomiao_v1.4_turbo_qnn2.28_8gen3.zip",
+      "名称": "苗苗_v1.4_turbo",
+      "URL": "https://hf-mirror.com/xororz/anima-qnn/blob/main/miaomiao_v1.4_turbo_qnn2.28_8gen3.zip",
       "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/miaomiao_v1.4_turbo.jpg"
     },
     {
-      "name": "epiCRealismNaturalSinRC",
-      "url": "https://hf-mirror.com/Mykee/SD_1.5_NPU_models_for_Local_Dream/tree/main",
-      "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/miaomiao_v1.4_turbo.jpg"
+      "名称": "epiCrealismNaturalSinRC",
+      "URL": "https://hf-mirror.com/Mykee/SD_1.5_NPU_models_for_Local_Dream/tree/main",
+"image_url"："https://github.com/sds233/HTML/blob/5c5715749516ff8618f3d83873cec905a77344f4/html_res/epiCRealismNaturalSinRC.png"
     }
   ]
 }
