@@ -1,83 +1,26 @@
-有问题，而且是语法 + 键名双重问题，浏览器直接 JSON.parse 就会报错。
-
-1. 语法错误（不合法）
-位置
-问题
-"已更新"："2026-09-09"
-用了全角冒号 ：，JSON 必须用半角 :
-"计数": 4, 之后的 ，，
-连续两个逗号，多余的悬空逗号
-"已更新" 出现两次
-重复键，且第二次值是 "URL"："https://hf-mirror.com/Mykee/..."，把键当值写了，结构损坏
-全角逗号 / 引号
-，、“” 都不能出现在 JSON 里
-2. 键名与页面代码不匹配
-
-页面读取的是英文键，你这份是中文键（还混用大小写）：
-页面代码读取
-你的 JSON
-data.list
-列表
-data.updated
-已更新
-data.count
-计数
-item.name
-名称
-item.url
-URL（大写）
-item.image_url
-image_url ✅ 唯一对得上的
-结果就是 items 取到空数组，推荐区只会显示"暂无数据"。页面的容错函数只能修全角符号和尾逗号，修不了键名和结构损坏。
-
-3. 数据本身的两处问题
-
-第 4 条 epiCrealismNaturalSinRC 的 image_url 是 github.com/.../blob/... 网页地址，不是图片直链，￼ 加载必然失败，要换成 raw.githubusercontent.com 或 jsdelivr。
-仓库名不一致：图片链接写的是 sds233/HTML-（带连字符），而页面代码常量是 GITHUB_REPO = 'sds233/HTML'（无连字符）。需要确认实际仓库名到底是哪个，否则数据源会 404。
-
-已按页面代码的键名约定改好一份合法版本：
-
- 
-
 {
-
   "updated": "2026-09-09",
-
   "count": 4,
-
   "list": [
-
-    { "name": "苗苗_RealSkin_v1.4",
-
-      "url": "https://hf-mirror.com/xororz/sdxl-qnn/blob/main/miaomiao_realskin_v1.4_qnn2.28_8gen3.zip",
-
-      "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/miaomiao_realskin_v1.4.png" },
-
-    { "name": "MajicmixRealisticV7",
-
-      "url": "https://hf-mirror.com/xororz/sd-qnn/blob/main/MajicmixRealisticV7_qnn2.28_8gen1.zip",
-
-      "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/MajicmixRealisticV7.png" },
-
-    { "name": "苗苗_v1.4_turbo",
-
-      "url": "https://hf-mirror.com/xororz/anima-qnn/blob/main/miaomiao_v1.4_turbo_qnn2.28_8gen3.zip",
-
-      "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/miaomiao_v1.4_turbo.jpg" },
-
-    { "name": "epiCrealismNaturalSinRC",
-
-      "url": "https://hf-mirror.com/Mykee/SD_1.5_NPU_models_for_Local_Dream/tree/main",
-
-      "image_url": "https://raw.githubusercontent.com/sds233/HTML-/main/html_res/epiCRealismNaturalSinRC.png" }
-
+    {
+      "name": "苗苗_RealSkin_v1.4",
+      "url": "https:\/\/hf-mirror.com\/xororz\/sdxl-qnn\/blob\/main\/miaomiao_realskin_v1.4_qnn2.28_8gen3.zip",
+      "image_url": "https:\/\/raw.githubusercontent.com\/sds233\/HTML-\/main\/html_res\/miaomiao_realskin_v1.4.png"
+    },
+    {
+      "name": "MajicmixRealisticV7",
+      "url": "https:\/\/hf-mirror.com\/xororz\/sd-qnn\/blob\/main\/MajicmixRealisticV7_qnn2.28_8gen1.zip",
+      "image_url": "https:\/\/raw.githubusercontent.com\/sds233\/HTML-\/main\/html_res\/MajicmixRealisticV7.png"
+    },
+    {
+      "name": "苗苗_v1.4_turbo",
+      "url": "https:\/\/hf-mirror.com\/xororz\/anima-qnn\/blob\/main\/miaomiao_v1.4_turbo_qnn2.28_8gen3.zip",
+      "image_url": "https:\/\/raw.githubusercontent.com\/sds233\/HTML-\/main\/html_res\/miaomiao_v1.4_turbo.jpg"
+    },
+    {
+      "name": "epiCrealismNaturalSinRC",
+      "url": "https:\/\/hf-mirror.com\/Mykee\/SD_1.5_NPU_models_for_Local_Dream\/tree\/main",
+      "image_url": "https:\/\/raw.githubusercontent.com\/sds233\/HTML-\/main\/html_res\/epiCRealismNaturalSinRC.png"
+    }
   ]
-
 }
-
- 
-
-已校验通过，可直接上传替换 GitHub 上的 html_res/res.json：
-
-老板，如果你更想保留中文键名，我也可以改页面代码让它中英文键名都兼容，你说一声。
-res.json
